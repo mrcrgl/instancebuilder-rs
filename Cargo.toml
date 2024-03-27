@@ -1,0 +1,12 @@
+[package]
+name = "instancebuilder"
+version = "0.1.0"
+edition = "2021"
+authors = ["Marc Riegel <mail@mrcrgl.de>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/mrcrgl/processmanager-rs"
+categories = ["rust-patterns", "config"]
+keywords = ["process", "configuration", "dependency-injection"]
+
+[dependencies]
