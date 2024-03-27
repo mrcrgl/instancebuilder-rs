@@ -1,6 +1,7 @@
 [package]
 name = "instancebuilder"
-version = "0.1.0"
+description = "Convenient way of managing dependency injection"
+version = "0.1.1"
 edition = "2021"
 authors = ["Marc Riegel <mail@mrcrgl.de>"]
 license = "MIT"
