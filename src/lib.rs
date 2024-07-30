@@ -1,6 +1,6 @@
 use std::any::{type_name, Any, TypeId};
 use std::collections::HashMap;
-use std::fmt::{Formatter};
+use std::fmt::Formatter;
 
 /// InstanceBuilder offers the creation of configured instances. Due to this pattern, you can for
 /// example use dependency injection in your tests without exposing those.
@@ -9,7 +9,7 @@ use std::fmt::{Formatter};
 ///
 /// ```
 /// use std::convert::Infallible;
-/// use ::instancebuilder::{Error, InstanceBuilder, FromInstanceBuilder};
+/// use ::instancebuilder::{BuilderError, InstanceBuilder, FromInstanceBuilder};
 ///
 /// struct TestImplementation {
 ///     inner: String,
@@ -20,7 +20,7 @@ use std::fmt::{Formatter};
 /// }
 ///
 /// impl FromInstanceBuilder for TestImplementation {
-///     fn try_from_builder(builder: &InstanceBuilder) -> Result<Self, Error> {
+///     fn try_from_builder(builder: &InstanceBuilder) -> Result<Self, BuilderError> {
 ///         let config: &TestConfig = builder.data()?;
 ///         Ok(Self {
 ///             inner: config.key.clone(),
@@ -53,9 +53,9 @@ impl InstanceBuilder {
         self.data.insert(TypeId::of::<D>(), Box::new(data));
     }
 
-    pub fn data<D: Any + Send + Sync>(&self) -> Result<&D, Error> {
+    pub fn data<D: Any + Send + Sync>(&self) -> Result<&D, BuilderError> {
         self.data_opt()
-            .ok_or_else(|| Error::DataDoesNotExist {
+            .ok_or_else(|| BuilderError::DataDoesNotExist {
                 ty: type_name::<D>().to_string(),
             })
     }
@@ -66,9 +66,9 @@ impl InstanceBuilder {
             .and_then(|d| d.downcast_ref::<D>())
     }
 
-    pub fn build<T>(&self) -> Result<T, Error>
-        where
-            T: FromInstanceBuilder,
+    pub fn build<T>(&self) -> Result<T, BuilderError>
+    where
+        T: FromInstanceBuilder,
     {
         T::try_from_builder(self)
     }
@@ -81,26 +81,31 @@ impl Default for InstanceBuilder {
 }
 
 #[derive(Debug)]
-pub enum Error {
+pub enum BuilderError {
     DataDoesNotExist { ty: String },
+    Other(String),
 }
 
-impl ::std::error::Error for Error {}
+impl ::std::error::Error for BuilderError {}
 
-impl ::std::fmt::Display for Error {
+impl ::std::fmt::Display for BuilderError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self { Error::DataDoesNotExist { ty} => write!(f, "data of type {ty} does not exist"),
+        match self {
+            BuilderError::DataDoesNotExist { ty } => write!(f, "data of type {ty} does not exist"),
+            BuilderError::Other(err) => {
+                write!(f, "other error: {err}")
+            }
         }
     }
 }
 
 pub trait FromInstanceBuilder: Sized {
-    fn try_from_builder(builder: &InstanceBuilder) -> Result<Self, Error>;
+    fn try_from_builder(builder: &InstanceBuilder) -> Result<Self, BuilderError>;
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{FromInstanceBuilder, InstanceBuilder, Error};
+    use super::{BuilderError, FromInstanceBuilder, InstanceBuilder};
     use std::any::{Any, TypeId};
 
     struct TestImplementation {
@@ -112,7 +117,7 @@ mod tests {
     }
 
     impl FromInstanceBuilder for TestImplementation {
-        fn try_from_builder(builder: &InstanceBuilder) -> Result<Self, Error> {
+        fn try_from_builder(builder: &InstanceBuilder) -> Result<Self, BuilderError> {
             let config: &TestConfig = builder.data()?;
             Ok(Self {
                 inner: config.key.clone(),
